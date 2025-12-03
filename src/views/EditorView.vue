@@ -47,10 +47,22 @@
 
         <!-- Export -->
         <button
-          @click="exportCanvas"
+          @click="showExportModal = true"
           class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
         >
           Export
+        </button>
+
+        <!-- AI Assistant Toggle -->
+        <button
+          @click="showAIPanel = !showAIPanel"
+          class="px-4 py-2 rounded-lg transition-all flex items-center gap-2"
+          :class="showAIPanel ? 'bg-purple-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-white'"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+          AI
         </button>
       </div>
     </div>
@@ -76,7 +88,52 @@
         />
       </div>
 
-      <!-- Right Panel (from Toolbar) is rendered separately -->
+      <!-- AI Panel -->
+      <AIPanel
+        v-if="showAIPanel"
+        @generated-image="handleGeneratedImage"
+      />
+    </div>
+
+    <!-- Export Modal -->
+    <div v-if="showExportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="showExportModal = false">
+      <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4" @click.stop>
+        <h2 class="text-xl font-semibold text-white mb-4">Export Artwork</h2>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Format</label>
+            <select v-model="exportFormat" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+              <option value="png">PNG (High Quality)</option>
+              <option value="jpg">JPG (Compressed)</option>
+              <option value="webp">WebP (Modern)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Quality</label>
+            <select v-model="exportQuality" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+              <option value="1">Original Size</option>
+              <option value="2">2x (High DPI)</option>
+              <option value="0.5">0.5x (Web Optimized)</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <input type="checkbox" v-model="addWatermark" id="watermark" class="w-4 h-4 rounded">
+            <label for="watermark" class="text-sm text-slate-300">Add watermark</label>
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button @click="showExportModal = false" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
+            Cancel
+          </button>
+          <button @click="exportCanvas" class="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white rounded-lg transition-all">
+            Export
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -90,6 +147,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useSocket } from '../composables/useSocket';
 import DrawingCanvas from '../components/canvas/DrawingCanvas.vue';
 import Toolbar from '../components/canvas/Toolbar.vue';
+import AIPanel from '../components/canvas/AIPanel.vue';
 
 const route = useRoute();
 const projectStore = useProjectStore();
@@ -100,6 +158,11 @@ const projectId = computed(() => route.params.id as string);
 const project = ref<any>(null);
 const canvasRef = ref<InstanceType<typeof DrawingCanvas> | null>(null);
 const saving = ref(false);
+const showAIPanel = ref(false);
+const showExportModal = ref(false);
+const exportFormat = ref('png');
+const exportQuality = ref('1');
+const addWatermark = ref(false);
 
 const {
   connect,
@@ -253,10 +316,46 @@ const saveVersion = async () => {
 const exportCanvas = () => {
   if (!canvasRef.value) return;
 
-  const dataUrl = canvasRef.value.getCanvasData();
-  const link = document.createElement('a');
-  link.download = `${project.value?.title || 'artwork'}.png`;
-  link.href = dataUrl;
-  link.click();
+  const canvas = canvasRef.value.getCanvas();
+  if (!canvas) return;
+
+  const scale = parseFloat(exportQuality.value);
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = canvas.width * scale;
+  exportCanvas.height = canvas.height * scale;
+  const ctx = exportCanvas.getContext('2d');
+
+  if (ctx) {
+    ctx.scale(scale, scale);
+    ctx.drawImage(canvas, 0, 0);
+
+    if (addWatermark.value) {
+      ctx.font = '20px Arial';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillText('Art Studio', 20, canvas.height - 20);
+    }
+
+    const mimeType = exportFormat.value === 'png' ? 'image/png' :
+                     exportFormat.value === 'jpg' ? 'image/jpeg' : 'image/webp';
+    const dataUrl = exportCanvas.toDataURL(mimeType, 0.95);
+
+    const link = document.createElement('a');
+    link.download = `${project.value?.title || 'artwork'}.${exportFormat.value}`;
+    link.href = dataUrl;
+    link.click();
+
+    showExportModal.value = false;
+  }
+};
+
+const handleGeneratedImage = async (imageUrl: string) => {
+  if (!canvasRef.value) return;
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    canvasRef.value?.drawImage(img);
+  };
+  img.src = imageUrl;
 };
 </script>

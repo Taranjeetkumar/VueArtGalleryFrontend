@@ -188,10 +188,31 @@ const clearCanvas = () => {
   ctx.fillRect(0, 0, canvasStore.canvasSize.width, canvasStore.canvasSize.height);
 };
 
+const getCanvas = () => {
+  return canvasRef.value;
+};
+
+const drawImage = (img: HTMLImageElement) => {
+  if (!ctx) return;
+  // Center the image on canvas
+  const scale = Math.min(
+    canvasStore.canvasSize.width / img.width,
+    canvasStore.canvasSize.height / img.height
+  );
+  const scaledWidth = img.width * scale * 0.8; // Scale to 80% to leave some margin
+  const scaledHeight = img.height * scale * 0.8;
+  const x = (canvasStore.canvasSize.width - scaledWidth) / 2;
+  const y = (canvasStore.canvasSize.height - scaledHeight) / 2;
+  ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+  emit('save-state');
+};
+
 defineExpose({
   applyRemoteDrawing,
   getCanvasData,
   loadCanvasData,
-  clearCanvas
+  clearCanvas,
+  getCanvas,
+  drawImage
 });
 </script>

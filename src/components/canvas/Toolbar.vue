@@ -177,6 +177,8 @@ const selectColor = (color: string) => {
 </script>
 
 <style scoped>
+@reference "tailwindcss";
+
 input[type="range"] {
   @apply appearance-none bg-slate-700 h-2 rounded-full;
 }
