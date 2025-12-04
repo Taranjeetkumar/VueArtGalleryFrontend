@@ -9,10 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('token'));
   const loading = ref(false);
   const error = ref<string | null>(null);
-
   const isAuthenticated = computed(() => !!token.value);
-
-  // Set auth header
   if (token.value) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${token.value}`;
   }

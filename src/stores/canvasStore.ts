@@ -107,16 +107,13 @@ export const useCanvasStore = defineStore('canvas', () => {
   };
 
   const saveState = (canvasData: string) => {
-    // Remove any states after current index
     history.value = history.value.slice(0, historyIndex.value + 1);
 
-    // Add new state
     history.value.push({
       layers: JSON.parse(JSON.stringify(layers.value)),
       canvasData
     });
 
-    // Limit history size
     if (history.value.length > maxHistory) {
       history.value.shift();
     } else {

@@ -66,7 +66,6 @@ onMounted(() => {
   if (canvasRef.value) {
     ctx = canvasRef.value.getContext('2d');
     if (ctx) {
-      // Fill canvas with background color
       ctx.fillStyle = canvasStore.backgroundColor;
       ctx.fillRect(0, 0, canvasStore.canvasSize.width, canvasStore.canvasSize.height);
     }
@@ -96,7 +95,6 @@ const draw = (e: MouseEvent) => {
   const currentX = (e.clientX - rect.left) / canvasStore.zoom;
   const currentY = (e.clientY - rect.top) / canvasStore.zoom;
 
-  // Emit cursor position for collaboration
   emit('cursor-move', currentX, currentY);
 
   if (!isDrawing.value) return;
