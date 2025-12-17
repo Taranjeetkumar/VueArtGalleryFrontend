@@ -96,14 +96,14 @@
         <!-- Pricing -->
         <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-6 space-y-4">
           <h3 class="text-lg font-semibold text-white mb-4">Pricing</h3>
-          
+
           <!-- Starting Price -->
           <div>
             <label class="block text-sm font-medium text-white mb-2">
               Starting Price <span class="text-red-400">*</span>
             </label>
             <div class="relative">
-              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">€</span>
               <input
                 v-model.number="formData.startingPrice"
                 type="number"
@@ -123,7 +123,7 @@
               Reserve Price (Optional)
             </label>
             <div class="relative">
-              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">€</span>
               <input
                 v-model.number="formData.reservePrice"
                 type="number"
@@ -142,7 +142,7 @@
               Buy Now Price (Optional)
             </label>
             <div class="relative">
-              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">€</span>
               <input
                 v-model.number="formData.buyNowPrice"
                 type="number"
@@ -249,7 +249,7 @@ const validationErrors = computed(() => {
   const errors: string[] = [];
 
   if (formData.value.startingPrice && formData.value.startingPrice < 1) {
-    errors.push('Starting price must be at least $1');
+    errors.push('Starting price must be at least €1');
   }
 
   if (formData.value.reservePrice && formData.value.startingPrice) {

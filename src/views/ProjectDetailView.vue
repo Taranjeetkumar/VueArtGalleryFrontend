@@ -18,20 +18,23 @@
               <p class="text-slate-400">{{ project.description }}</p>
             </div>
             <div class="flex gap-2">
-              <button
-                v-if="authStore.isAuthenticated"
-                @click="handleVote(1)"
-                class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-              >
-                👍 {{ project.voteCount || 0 }}
-              </button>
-              <button
-                v-if="authStore.isAuthenticated"
-                @click="handleFork"
-                class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white rounded-lg transition-all"
-              >
-                Fork Project
-              </button>
+              <div v-if="!authStore.isAuthenticated" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg text-sm">
+                Login to interact
+              </div>
+              <template v-else>
+                <button
+                  @click="handleVote(1)"
+                  class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                >
+                  👍 {{ project.voteCount || 0 }}
+                </button>
+                <button
+                  @click="handleFork"
+                  class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white rounded-lg transition-all"
+                >
+                  Fork Project
+                </button>
+              </template>
             </div>
           </div>
 

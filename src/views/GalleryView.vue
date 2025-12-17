@@ -94,7 +94,7 @@
             <div v-if="project.auction?.isActive" class="mb-3 p-2 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-lg border border-yellow-500/20">
               <div class="flex justify-between items-center text-sm">
                 <span class="text-yellow-400 font-medium">Current Bid:</span>
-                <span class="text-white font-bold">${{ project.auction.currentPrice || project.auction.startPrice }}</span>
+                <span class="text-white font-bold">€{{ project.auction.currentPrice || project.auction.startPrice }}</span>
               </div>
               <div class="flex justify-between items-center text-xs text-slate-400 mt-1">
                 <span>{{ project.auction.bids?.length || 0 }} bids</span>
@@ -154,7 +154,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useProjectStore } from '../stores/projectStore';
 import { useAuthStore } from '../stores/authStore';
 
@@ -164,29 +164,65 @@ const searchQuery = ref('');
 const sortBy = ref('-voteCount');
 const filterType = ref('all');
 
+// Cache for search results
+const searchCache = new Map<string, any>();
+
 onMounted(() => {
   fetchGallery();
 });
 
-const fetchGallery = () => {
-  projectStore.fetchProjects({
+// Watch filterType changes
+watch(filterType, () => {
+  fetchGallery();
+});
+
+const fetchGallery = async () => {
+  const cacheKey = `${searchQuery.value}-${sortBy.value}-${filterType.value}`;
+
+  // Check cache first
+  if (searchCache.has(cacheKey)) {
+    projectStore.projects = searchCache.get(cacheKey);
+    return;
+  }
+
+  const params: any = {
     sort: sortBy.value,
     search: searchQuery.value
-  });
+  };
+
+  // Filter by auction status
+  if (filterType.value === 'auction') {
+    params.onlyAuction = true;
+  }
+
+  const result = await projectStore.fetchProjects(params);
+
+  // Cache the results
+  if (result?.projects) {
+    searchCache.set(cacheKey, result.projects);
+  }
 };
 
+// Debounced search handler
 let searchTimeout: any;
 const handleSearch = () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     fetchGallery();
-  }, 500);
+  }, 300); // Reduced to 300ms for better responsiveness
 };
 
 const handleVote = async (projectId: string, value: number) => {
+  if (!authStore.isAuthenticated) {
+    alert('Please login to vote');
+    return;
+  }
+
   try {
     await projectStore.voteProject(projectId, value);
-    await fetchGallery(); // Refresh to show updated votes
+    // Clear cache and refresh to show updated votes
+    searchCache.clear();
+    await fetchGallery();
   } catch (error) {
     console.error('Vote error:', error);
   }

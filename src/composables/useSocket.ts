@@ -104,9 +104,21 @@ export function useSocket() {
     }
   };
 
+  const emitCanvasUpdate = (projectId: string, canvasData: string, layers: any[]) => {
+    if (socket.value) {
+      socket.value.emit('canvas-update', { projectId, canvasData, layers });
+    }
+  };
+
   const onDraw = (callback: (data: any) => void) => {
     if (socket.value) {
       socket.value.on('draw', callback);
+    }
+  };
+
+  const onSyncState = (callback: (data: { canvasData: string; layers: any[]; version: number }) => void) => {
+    if (socket.value) {
+      socket.value.on('sync-state', callback);
     }
   };
 
@@ -187,7 +199,9 @@ export function useSocket() {
     emitRedo,
     emitClearCanvas,
     emitToolChange,
+    emitCanvasUpdate,
     onDraw,
+    onSyncState,
     onCursorUpdate,
     onUserJoined,
     onUserLeft,

@@ -114,7 +114,7 @@
                     </div>
                   </div>
                   <div class="text-right">
-                    <p class="text-xl font-bold text-cyan-400">${{ bid.amount.toLocaleString() }}</p>
+                    <p class="text-xl font-bold text-cyan-400">€{{ bid.amount.toLocaleString() }}</p>
                     <p v-if="index === 0" class="text-xs text-green-400 font-semibold">Highest Bid</p>
                   </div>
                 </div>
@@ -132,7 +132,7 @@
               <!-- Current Price -->
               <div class="mb-6">
                 <p class="text-sm text-slate-400 mb-1">Current Bid</p>
-                <p class="text-4xl font-bold text-cyan-400">${{ auction.currentPrice.toLocaleString() }}</p>
+                <p class="text-4xl font-bold text-cyan-400">€{{ auction.currentPrice.toLocaleString() }}</p>
                 <p class="text-sm text-slate-500 mt-1">{{ auction.bids.length }} {{ auction.bids.length === 1 ? 'bid' : 'bids' }}</p>
               </div>
 
@@ -156,7 +156,7 @@
                 class="w-full mb-4 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all"
               >
                 <span v-if="buyNowLoading">Processing...</span>
-                <span v-else>Buy Now - ${{ auction.buyNowPrice.toLocaleString() }}</span>
+                <span v-else>Buy Now - €{{ auction.buyNowPrice.toLocaleString() }}</span>
               </button>
 
               <!-- Bidding Form (for authenticated users who don't own the auction) -->
@@ -164,7 +164,7 @@
                 <div class="mb-4">
                   <label class="block text-sm text-slate-400 mb-2">Your Bid</label>
                   <div class="relative">
-                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">€</span>
                     <input
                       v-model.number="bidAmount"
                       type="number"
@@ -174,7 +174,7 @@
                       placeholder="Enter bid amount"
                     />
                   </div>
-                  <p class="text-xs text-slate-500 mt-1">Minimum bid: ${{ minBidAmount.toLocaleString() }}</p>
+                  <p class="text-xs text-slate-500 mt-1">Minimum bid: €{{ minBidAmount.toLocaleString() }}</p>
                 </div>
                 <button
                   @click="handlePlaceBid"
@@ -207,11 +207,11 @@
               <div class="mt-6 pt-6 border-t border-slate-700 space-y-2 text-sm">
                 <div class="flex justify-between">
                   <span class="text-slate-400">Starting Price</span>
-                  <span class="text-white font-semibold">${{ auction.startingPrice.toLocaleString() }}</span>
+                  <span class="text-white font-semibold">€{{ auction.startingPrice.toLocaleString() }}</span>
                 </div>
                 <div v-if="auction.reservePrice" class="flex justify-between">
                   <span class="text-slate-400">Reserve Price</span>
-                  <span class="text-white font-semibold">${{ auction.reservePrice.toLocaleString() }}</span>
+                  <span class="text-white font-semibold">€{{ auction.reservePrice.toLocaleString() }}</span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-slate-400">Started</span>
@@ -323,7 +323,7 @@ const handlePlaceBid = async () => {
 const handleBuyNow = async () => {
   if (!auction.value || !auction.value.buyNowPrice) return;
 
-  if (!confirm(`Are you sure you want to buy this item for $${auction.value.buyNowPrice.toLocaleString()}?`)) {
+  if (!confirm(`Are you sure you want to buy this item for €${auction.value.buyNowPrice.toLocaleString()}?`)) {
     return;
   }
 

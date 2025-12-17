@@ -50,7 +50,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-xs text-slate-500">Current Bid</p>
-                  <p class="text-xl font-bold text-cyan-400">${{ auction.currentPrice }}</p>
+                  <p class="text-xl font-bold text-cyan-400">€{{ auction.currentPrice }}</p>
                 </div>
                 <div class="text-right">
                   <p class="text-xs text-slate-500">Ends in</p>
@@ -83,7 +83,7 @@
         <h2 class="text-2xl font-bold text-white mb-4">All Active Auctions</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div
-            v-for="auction in auctionStore.auctions"
+            v-for="auction in nonFeaturedAuctions"
             :key="auction._id"
             @click="$router.push(`/auctions/${auction._id}`)"
             class="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-cyan-500/50 transition-all cursor-pointer group"
@@ -109,7 +109,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-xs text-slate-500">Current Bid</p>
-                  <p class="text-xl font-bold text-cyan-400">${{ auction.currentPrice }}</p>
+                  <p class="text-xl font-bold text-cyan-400">€{{ auction.currentPrice }}</p>
                 </div>
                 <div class="text-right">
                   <p class="text-xs text-slate-500">{{ auction.bids.length }} bids</p>
@@ -152,6 +152,21 @@ const auctionStore = useAuctionStore();
 const authStore = useAuthStore();
 
 const featuredAuctions = computed(() => auctionStore.featuredAuctions);
+
+// Filter out auctions that are already shown in "Ending Soon"
+const nonFeaturedAuctions = computed(() => {
+  if (!auctionStore.auctions || !featuredAuctions.value?.endingSoon) {
+    return auctionStore.auctions;
+  }
+
+  const endingSoonIds = new Set(
+    featuredAuctions.value.endingSoon.map((auction: any) => auction._id)
+  );
+
+  return auctionStore.auctions.filter(
+    (auction: any) => !endingSoonIds.has(auction._id)
+  );
+});
 
 onMounted(() => {
   auctionStore.fetchActiveAuctions();

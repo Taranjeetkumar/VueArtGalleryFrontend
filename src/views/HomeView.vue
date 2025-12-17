@@ -58,9 +58,9 @@
             description="Work together with multiple artists on the same canvas in real-time with live cursors"
           />
           <FeatureCard
-            icon="layers"
-            title="Advanced Layers"
-            description="Professional layer system with opacity controls and blending modes"
+            icon="auction"
+            title="Art Auctions"
+            description="List your digital artwork on auctions and bid on amazing pieces from other artists"
           />
           <FeatureCard
             icon="git"

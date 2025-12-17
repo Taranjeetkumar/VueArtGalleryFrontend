@@ -184,6 +184,11 @@ const showARPreview = ref(false);
 const exportFormat = ref('png');
 const exportQuality = ref('1');
 const addWatermark = ref(false);
+const lastAutoSave = ref<Date | null>(null);
+
+// Auto-save configuration
+const AUTO_SAVE_INTERVAL = 60000; // Auto-save every 60 seconds
+let autoSaveInterval: number | null = null;
 
 const {
   connect,
@@ -195,7 +200,9 @@ const {
   emitUndo,
   emitRedo,
   emitClearCanvas,
+  emitCanvasUpdate,
   onDraw,
+  onSyncState,
   onCursorUpdate,
   onUserJoined,
   onUserLeft,
@@ -216,6 +223,19 @@ onMounted(async () => {
     canvasStore.setBackgroundColor(data.canvas.background);
   }
 
+  // Load layers from project
+  if (data.layers && data.layers.length > 0) {
+    canvasStore.loadLayers(data.layers);
+  }
+
+  // Load last saved canvas state
+  if (data.versions && data.versions.length > 0) {
+    const lastVersion = data.versions[data.versions.length - 1];
+    if (lastVersion.canvasData && canvasRef.value) {
+      canvasRef.value.loadCanvasData(lastVersion.canvasData);
+    }
+  }
+
   // Set color palette from project
   if (data.colors && data.colors.length > 0) {
     canvasStore.setColor(data.colors[0]);
@@ -226,6 +246,20 @@ onMounted(async () => {
   if (authStore.user) {
     joinProject(projectId.value, authStore.user._id, authStore.user.username);
   }
+
+  // Set up auto-save
+  autoSaveInterval = window.setInterval(autoSave, AUTO_SAVE_INTERVAL);
+
+  // Handle sync state from server (when joining a session with active users)
+  onSyncState((state) => {
+    if (canvasRef.value && state.canvasData) {
+      canvasRef.value.loadCanvasData(state.canvasData);
+    }
+    if (state.layers) {
+      canvasStore.loadLayers(state.layers);
+    }
+    console.log('Synced with project state, version:', state.version);
+  });
 
   onDraw((data) => {
     canvasRef.value?.applyRemoteDrawing(data.drawData);
@@ -264,7 +298,38 @@ onMounted(async () => {
 onUnmounted(() => {
   leaveProject(projectId.value);
   disconnect();
+
+  // Clear auto-save interval
+  if (autoSaveInterval) {
+    clearInterval(autoSaveInterval);
+  }
 });
+
+// Auto-save function
+const autoSave = async () => {
+  if (!canvasRef.value || saving.value) return;
+
+  try {
+    const canvasData = canvasRef.value.getCanvasData();
+    const thumbnail = canvasData;
+
+    // Silent save (no UI feedback for auto-save)
+    await projectStore.updateProject(projectId.value, {
+      layers: canvasStore.layers,
+      canvas: {
+        width: canvasStore.canvasSize.width,
+        height: canvasStore.canvasSize.height,
+        background: canvasStore.backgroundColor
+      },
+      thumbnail
+    });
+
+    lastAutoSave.value = new Date();
+    console.log('Auto-saved at', lastAutoSave.value.toLocaleTimeString());
+  } catch (error) {
+    console.error('Auto-save failed:', error);
+  }
+};
 
 const handleDraw = (drawData: any) => {
   emitDraw(projectId.value, drawData);
@@ -322,8 +387,16 @@ const saveVersion = async () => {
 
     await projectStore.updateProject(projectId.value, {
       layers: canvasStore.layers,
+      canvas: {
+        width: canvasStore.canvasSize.width,
+        height: canvasStore.canvasSize.height,
+        background: canvasStore.backgroundColor
+      },
       thumbnail
     });
+
+    // Emit canvas state to WebSocket for synchronization
+    emitCanvasUpdate(projectId.value, canvasData, canvasStore.layers);
 
     alert('Version saved successfully!');
   } catch (error) {
