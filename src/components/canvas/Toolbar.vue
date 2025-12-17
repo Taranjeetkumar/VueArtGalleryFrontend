@@ -50,7 +50,6 @@
 
     <div class="w-10 h-px bg-slate-700 my-2"/>
 
-    <!-- Undo/Redo -->
     <button
       @click="$emit('undo')"
       :disabled="!canvasStore.canUndo"
@@ -76,12 +75,10 @@
     </button>
   </div>
 
-  <!-- Right Panel with Controls -->
   <div class="bg-slate-800 border-l border-slate-700 w-64 p-4 overflow-y-auto">
     <h3 class="text-white font-semibold mb-4">Properties</h3>
 
     <div class="space-y-4">
-      <!-- Brush Size -->
       <div>
         <label class="text-sm text-slate-300 mb-2 block">Brush Size: {{ canvasStore.drawingState.strokeWidth }}px</label>
         <input
@@ -93,7 +90,6 @@
         >
       </div>
 
-      <!-- Opacity -->
       <div>
         <label class="text-sm text-slate-300 mb-2 block">Opacity: {{ Math.round(canvasStore.drawingState.opacity * 100) }}%</label>
         <input
@@ -106,7 +102,6 @@
         >
       </div>
 
-      <!-- Zoom -->
       <div>
         <label class="text-sm text-slate-300 mb-2 block">Zoom: {{ Math.round(canvasStore.zoom * 100) }}%</label>
         <input
@@ -119,7 +114,6 @@
         >
       </div>
 
-      <!-- Clear Canvas -->
       <button
         @click="$emit('clear')"
         class="w-full px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
@@ -161,6 +155,30 @@ const tools = [
     label: 'Eraser',
     icon: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
       h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' }))
+  },
+  {
+    name: 'rectangle',
+    label: 'Rectangle',
+    icon: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+      h('rect', { x: '3', y: '6', width: '18', height: '12', rx: '2', 'stroke-width': '2' }))
+  },
+  {
+    name: 'circle',
+    label: 'Circle',
+    icon: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+      h('circle', { cx: '12', cy: '12', r: '8', 'stroke-width': '2' }))
+  },
+  {
+    name: 'line',
+    label: 'Line',
+    icon: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M5 19L19 5' }))
+  },
+  {
+    name: 'fill',
+    label: 'Fill',
+    icon: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343' }))
   }
 ];
 

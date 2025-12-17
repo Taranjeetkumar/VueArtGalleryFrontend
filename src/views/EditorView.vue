@@ -45,6 +45,17 @@
           {{ saving ? 'Saving...' : 'Save Version' }}
         </button>
 
+        <!-- AR Preview -->
+        <button
+          @click="showARPreview = true"
+          class="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg transition-all flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+          </svg>
+          AR View
+        </button>
+
         <!-- Export -->
         <button
           @click="showExportModal = true"
@@ -135,6 +146,14 @@
         </div>
       </div>
     </div>
+
+    <!-- AR Preview Modal -->
+    <ARPreview
+      v-if="showARPreview"
+      :show="showARPreview"
+      :project-id="projectId"
+      @close="showARPreview = false"
+    />
   </div>
 </template>
 
@@ -148,6 +167,7 @@ import { useSocket } from '../composables/useSocket';
 import DrawingCanvas from '../components/canvas/DrawingCanvas.vue';
 import Toolbar from '../components/canvas/Toolbar.vue';
 import AIPanel from '../components/canvas/AIPanel.vue';
+import ARPreview from '../components/canvas/ARPreview.vue';
 
 const route = useRoute();
 const projectStore = useProjectStore();
@@ -160,6 +180,7 @@ const canvasRef = ref<InstanceType<typeof DrawingCanvas> | null>(null);
 const saving = ref(false);
 const showAIPanel = ref(false);
 const showExportModal = ref(false);
+const showARPreview = ref(false);
 const exportFormat = ref('png');
 const exportQuality = ref('1');
 const addWatermark = ref(false);
@@ -186,30 +207,31 @@ const {
 } = useSocket();
 
 onMounted(async () => {
-  // Fetch project data
   const data = await projectStore.fetchProject(projectId.value);
   project.value = data;
 
-  // Load canvas data if exists
-  if (data.layers && data.layers.length > 0) {
-    canvasStore.loadLayers(data.layers);
+  // Initialize canvas with project settings
+  if (data.canvas) {
+    canvasStore.setCanvasSize(data.canvas.width, data.canvas.height);
+    canvasStore.setBackgroundColor(data.canvas.background);
   }
 
-  // Connect to WebSocket
+  // Set color palette from project
+  if (data.colors && data.colors.length > 0) {
+    canvasStore.setColor(data.colors[0]);
+  }
+
   connect();
 
-  // Join project room
   if (authStore.user) {
     joinProject(projectId.value, authStore.user._id, authStore.user.username);
   }
 
-  // Setup WebSocket event handlers
   onDraw((data) => {
     canvasRef.value?.applyRemoteDrawing(data.drawData);
   });
 
   onCursorUpdate(() => {
-    // Cursor updates are handled by remoteCursors map
   });
 
   onUserJoined(({ username }) => {
@@ -298,7 +320,6 @@ const saveVersion = async () => {
       thumbnail
     });
 
-    // Update project data
     await projectStore.updateProject(projectId.value, {
       layers: canvasStore.layers,
       thumbnail
