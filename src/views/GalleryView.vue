@@ -20,7 +20,7 @@
             class="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-cyan-500"
           >
         </div>
-        <select
+        <!-- <select
           v-model="sortBy"
           @change="fetchGallery"
           class="px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-cyan-500"
@@ -28,7 +28,7 @@
           <option value="-voteCount">Most Popular</option>
           <option value="-createdAt">Newest</option>
           <option value="-viewCount">Most Viewed</option>
-        </select>
+        </select> -->
         <select
           v-model="filterType"
           @change="fetchGallery"
@@ -36,7 +36,7 @@
         >
           <option value="all">All Artworks</option>
           <option value="auction">On Auction</option>
-          <option value="trending">Trending</option>
+          <!-- <option value="trending">Trending</option> -->
         </select>
       </div>
 

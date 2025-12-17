@@ -173,6 +173,40 @@ export const useCanvasStore = defineStore('canvas', () => {
     currentLayerIndex.value = 0;
   };
 
+  const initializeFromTemplate = (template: any) => {
+    if (!template) return;
+
+    // Set canvas size
+    if (template.canvasSize) {
+      canvasSize.value = {
+        width: template.canvasSize.width,
+        height: template.canvasSize.height
+      };
+    }
+
+    // Set background color
+    if (template.backgroundColor) {
+      backgroundColor.value = template.backgroundColor;
+    }
+
+    // Set layers
+    if (template.layers && template.layers.length > 0) {
+      layers.value = template.layers.map((layer: any) => ({
+        id: layer.id || `layer-${Date.now()}-${Math.random()}`,
+        name: layer.name || 'Layer',
+        data: layer.data || '',
+        visible: layer.visible !== undefined ? layer.visible : true,
+        opacity: layer.opacity !== undefined ? layer.opacity : 1
+      }));
+      currentLayerIndex.value = 0;
+    }
+
+    // Set color palette if provided
+    if (template.colors && template.colors.length > 0) {
+      drawingState.value.color = template.colors[0];
+    }
+  };
+
   return {
     layers,
     currentLayerIndex,
@@ -201,6 +235,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     setCanvasSize,
     setBackgroundColor,
     setZoom,
-    loadLayers
+    loadLayers,
+    initializeFromTemplate
   };
 });

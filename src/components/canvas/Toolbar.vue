@@ -141,8 +141,8 @@ const tools = [
   {
     name: 'brush',
     label: 'Brush',
-    icon: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01' }))
+    icon: () => h('svg', { fill: 'currentColor', viewBox: '0 0 24 24' },
+      h('path', { d: 'M20.71 4.63l-1.34-1.34c-.39-.39-1.02-.39-1.41 0L9 12.25 11.75 15l8.96-8.96c.39-.39.39-1.02 0-1.41zM7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3z' }))
   },
   {
     name: 'pencil',
@@ -177,8 +177,8 @@ const tools = [
   {
     name: 'fill',
     label: 'Fill',
-    icon: () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343' }))
+    icon: () => h('svg', { fill: 'currentColor', viewBox: '0 0 24 24' },
+      h('path', { d: 'M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15c-.59.59-.59 1.54 0 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z' }))
   }
 ];
 

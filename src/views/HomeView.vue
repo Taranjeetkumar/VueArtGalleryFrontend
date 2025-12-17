@@ -15,10 +15,18 @@
           </p>
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <RouterLink
+              v-if="!authStore.isAuthenticated"
               to="/register"
               class="px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 rounded-xl transition-all transform hover:scale-105"
             >
               Get Started Free
+            </RouterLink>
+            <RouterLink
+              v-else
+              to="/dashboard"
+              class="px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 rounded-xl transition-all transform hover:scale-105"
+            >
+              Go to Dashboard
             </RouterLink>
             <RouterLink
               to="/gallery"
@@ -88,10 +96,18 @@
           Join thousands of artists collaborating and creating amazing digital art
         </p>
         <RouterLink
+          v-if="!authStore.isAuthenticated"
           to="/register"
           class="inline-block px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 rounded-xl transition-all transform hover:scale-105"
         >
           Create Free Account
+        </RouterLink>
+        <RouterLink
+          v-else
+          to="/dashboard"
+          class="inline-block px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 rounded-xl transition-all transform hover:scale-105"
+        >
+          Start Creating Now
         </RouterLink>
       </div>
     </section>
@@ -100,6 +116,9 @@
 
 <script setup lang="ts">
 import FeatureCard from '../components/common/FeatureCard.vue';
+import { useAuthStore } from '../stores/authStore';
+
+const authStore = useAuthStore();
 </script>
 
 <style scoped>

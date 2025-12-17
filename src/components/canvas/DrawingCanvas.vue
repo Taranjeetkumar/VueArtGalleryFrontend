@@ -61,6 +61,10 @@ let ctx: CanvasRenderingContext2D | null = null;
 let isDrawing = ref(false);
 let lastX = ref(0);
 let lastY = ref(0);
+let startX = ref(0);
+let startY = ref(0);
+let tempCanvas: HTMLCanvasElement | null = null;
+let tempCtx: CanvasRenderingContext2D | null = null;
 
 onMounted(() => {
   if (canvasRef.value) {
@@ -69,6 +73,12 @@ onMounted(() => {
       ctx.fillStyle = canvasStore.backgroundColor;
       ctx.fillRect(0, 0, canvasStore.canvasSize.width, canvasStore.canvasSize.height);
     }
+
+    // Create temporary canvas for shape preview
+    tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvasStore.canvasSize.width;
+    tempCanvas.height = canvasStore.canvasSize.height;
+    tempCtx = tempCanvas.getContext('2d');
   }
 });
 
@@ -84,8 +94,22 @@ const startDrawing = (e: MouseEvent) => {
 
   isDrawing.value = true;
   const rect = canvasRef.value.getBoundingClientRect();
-  lastX.value = (e.clientX - rect.left) / canvasStore.zoom;
-  lastY.value = (e.clientY - rect.top) / canvasStore.zoom;
+  const x = (e.clientX - rect.left) / canvasStore.zoom;
+  const y = (e.clientY - rect.top) / canvasStore.zoom;
+
+  lastX.value = x;
+  lastY.value = y;
+  startX.value = x;
+  startY.value = y;
+
+  const tool = canvasStore.drawingState.tool;
+
+  // For fill tool, execute immediately
+  if (tool === 'fill') {
+    floodFill(Math.floor(x), Math.floor(y));
+    isDrawing.value = false;
+    emit('save-state');
+  }
 };
 
 const draw = (e: MouseEvent) => {
@@ -101,6 +125,13 @@ const draw = (e: MouseEvent) => {
 
   const tool = canvasStore.drawingState.tool;
 
+  // For shape tools, show preview
+  if (['rectangle', 'circle', 'line'].includes(tool)) {
+    drawShapePreview(currentX, currentY);
+    return;
+  }
+
+  // For freehand tools
   ctx.strokeStyle = canvasStore.drawingState.color;
   ctx.lineWidth = canvasStore.drawingState.strokeWidth;
   ctx.lineCap = 'round';
@@ -135,11 +166,178 @@ const draw = (e: MouseEvent) => {
   lastY.value = currentY;
 };
 
+const drawShapePreview = (currentX: number, currentY: number) => {
+  if (!canvasRef.value || !ctx || !tempCanvas || !tempCtx) return;
+
+  // Save current canvas state to temp canvas
+  tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+  tempCtx.drawImage(canvasRef.value, 0, 0);
+
+  // Draw shape preview on main canvas
+  const tool = canvasStore.drawingState.tool;
+  ctx.strokeStyle = canvasStore.drawingState.color;
+  ctx.fillStyle = canvasStore.drawingState.color;
+  ctx.lineWidth = canvasStore.drawingState.strokeWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.globalAlpha = canvasStore.drawingState.opacity;
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Restore canvas and draw preview
+  ctx.clearRect(0, 0, canvasStore.canvasSize.width, canvasStore.canvasSize.height);
+  ctx.drawImage(tempCanvas, 0, 0);
+
+  if (tool === 'rectangle') {
+    const width = currentX - startX.value;
+    const height = currentY - startY.value;
+    ctx.strokeRect(startX.value, startY.value, width, height);
+  } else if (tool === 'circle') {
+    const radius = Math.sqrt(
+      Math.pow(currentX - startX.value, 2) + Math.pow(currentY - startY.value, 2)
+    );
+    ctx.beginPath();
+    ctx.arc(startX.value, startY.value, radius, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.closePath();
+  } else if (tool === 'line') {
+    ctx.beginPath();
+    ctx.moveTo(startX.value, startY.value);
+    ctx.lineTo(currentX, currentY);
+    ctx.stroke();
+    ctx.closePath();
+  }
+};
+
 const stopDrawing = () => {
-  if (isDrawing.value) {
-    isDrawing.value = false;
+  if (!isDrawing.value) return;
+
+  const tool = canvasStore.drawingState.tool;
+
+  // For shape tools, finalize the shape
+  if (['rectangle', 'circle', 'line'].includes(tool) && ctx) {
+    // The shape is already drawn, just restore temp canvas
+    if (tempCanvas) {
+      ctx.clearRect(0, 0, canvasStore.canvasSize.width, canvasStore.canvasSize.height);
+      ctx.drawImage(tempCanvas, 0, 0);
+    }
+
+    // Redraw the final shape
+    const currentX = lastX.value;
+    const currentY = lastY.value;
+
+    ctx.strokeStyle = canvasStore.drawingState.color;
+    ctx.fillStyle = canvasStore.drawingState.color;
+    ctx.lineWidth = canvasStore.drawingState.strokeWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = canvasStore.drawingState.opacity;
+    ctx.globalCompositeOperation = 'source-over';
+
+    if (tool === 'rectangle') {
+      const width = currentX - startX.value;
+      const height = currentY - startY.value;
+      ctx.strokeRect(startX.value, startY.value, width, height);
+    } else if (tool === 'circle') {
+      const radius = Math.sqrt(
+        Math.pow(currentX - startX.value, 2) + Math.pow(currentY - startY.value, 2)
+      );
+      ctx.beginPath();
+      ctx.arc(startX.value, startY.value, radius, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.closePath();
+    } else if (tool === 'line') {
+      ctx.beginPath();
+      ctx.moveTo(startX.value, startY.value);
+      ctx.lineTo(currentX, currentY);
+      ctx.stroke();
+      ctx.closePath();
+    }
+
+    emit('save-state');
+  } else if (isDrawing.value) {
     emit('save-state');
   }
+
+  isDrawing.value = false;
+};
+
+// Flood fill implementation
+const floodFill = (startX: number, startY: number) => {
+  if (!ctx || !canvasRef.value) return;
+
+  const imageData = ctx.getImageData(0, 0, canvasStore.canvasSize.width, canvasStore.canvasSize.height);
+  const pixels = imageData.data;
+
+  // Get target color at click position
+  const startPos = (startY * canvasStore.canvasSize.width + startX) * 4;
+  const targetColor = {
+    r: pixels[startPos],
+    g: pixels[startPos + 1],
+    b: pixels[startPos + 2],
+    a: pixels[startPos + 3]
+  };
+
+  // Convert fill color from hex to RGB
+  const fillColor = hexToRgb(canvasStore.drawingState.color);
+  if (!fillColor) return;
+
+  const fillR = fillColor.r;
+  const fillG = fillColor.g;
+  const fillB = fillColor.b;
+  const fillA = Math.round(canvasStore.drawingState.opacity * 255);
+
+  // Don't fill if target color is same as fill color
+  if (targetColor.r === fillR && targetColor.g === fillG &&
+      targetColor.b === fillB && targetColor.a === fillA) {
+    return;
+  }
+
+  const stack = [[startX, startY]];
+  const visited = new Set<string>();
+
+  while (stack.length > 0) {
+    const [x, y] = stack.pop()!;
+    const key = `${x},${y}`;
+
+    if (visited.has(key)) continue;
+    if (x < 0 || x >= canvasStore.canvasSize.width ||
+        y < 0 || y >= canvasStore.canvasSize.height) continue;
+
+    const pos = (y * canvasStore.canvasSize.width + x) * 4;
+
+    // Check if pixel matches target color
+    if (pixels[pos] !== targetColor.r ||
+        pixels[pos + 1] !== targetColor.g ||
+        pixels[pos + 2] !== targetColor.b ||
+        pixels[pos + 3] !== targetColor.a) {
+      continue;
+    }
+
+    visited.add(key);
+
+    // Fill pixel
+    pixels[pos] = fillR;
+    pixels[pos + 1] = fillG;
+    pixels[pos + 2] = fillB;
+    pixels[pos + 3] = fillA;
+
+    // Add neighbors to stack
+    stack.push([x + 1, y]);
+    stack.push([x - 1, y]);
+    stack.push([x, y + 1]);
+    stack.push([x, y - 1]);
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+};
+
+const hexToRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
 };
 
 const applyRemoteDrawing = (drawData: any) => {

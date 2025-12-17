@@ -2,7 +2,7 @@
   <nav class="bg-slate-900/90 backdrop-blur-lg border-b border-slate-700 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
-        
+
         <!-- Logo -->
         <RouterLink to="/" class="flex items-center space-x-2">
           <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-indigo-500 rounded-lg flex items-center justify-center">
@@ -23,6 +23,11 @@
           <RouterLink to="/gallery" class="nav-link">
             Gallery
             <div v-if="$route.path === '/gallery'" class="active-underline"></div>
+          </RouterLink>
+
+          <RouterLink to="/auctions" class="nav-link">
+            Auctions
+            <div v-if="$route.path.startsWith('/auctions')" class="active-underline"></div>
           </RouterLink>
 
           <RouterLink

@@ -45,6 +45,22 @@ const router = createRouter({
       path: '/ar/:id',
       name: 'ARViewer',
       component: () => import('../views/ARViewer.vue')
+    },
+    {
+      path: '/auctions',
+      name: 'Auctions',
+      component: () => import('../views/AuctionsView.vue')
+    },
+    {
+      path: '/auctions/create',
+      name: 'CreateAuction',
+      component: () => import('../views/CreateAuctionView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/auctions/:id',
+      name: 'AuctionDetail',
+      component: () => import('../views/AuctionDetailView.vue')
     }
   ]
 });

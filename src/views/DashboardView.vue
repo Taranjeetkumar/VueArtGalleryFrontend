@@ -73,7 +73,7 @@
       <div
         v-if="showCreateDialog"
         class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-        @click.self="showCreateDialog = false"
+        @click.self="closeCreateDialog"
       >
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-md w-full">
           <h2 class="text-2xl font-bold text-white mb-4">Create New Project</h2>
@@ -108,14 +108,14 @@
               >
                 <option value="private">Private</option>
                 <option value="public">Public</option>
-                <option value="unlisted">Unlisted</option>
+                <!-- <option value="unlisted">Unlisted</option> -->
               </select>
             </div>
 
             <div class="flex gap-3 pt-4">
               <button
                 type="button"
-                @click="showCreateDialog = false"
+                @click="closeCreateDialog"
                 class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
               >
                 Cancel
@@ -144,6 +144,7 @@ const router = useRouter();
 const projectStore = useProjectStore();
 
 const showCreateDialog = ref(false);
+
 const newProject = ref({
   title: '',
   description: '',
@@ -165,6 +166,10 @@ const createProject = async () => {
     newProject.value = { title: '', description: '', visibility: 'private' };
     router.push(`/editor/${project._id}`);
   }
+};
+
+const closeCreateDialog = () => {
+  showCreateDialog.value = false;
 };
 
 const formatDate = (date: string) => {
