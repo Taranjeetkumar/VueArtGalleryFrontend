@@ -32,10 +32,12 @@
         <div
           v-for="project in projectStore.myProjects"
           :key="project._id"
-          class="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-cyan-500/50 transition-all group cursor-pointer"
-          @click="openProject(project._id)"
+          class="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-cyan-500/50 transition-all group"
         >
-          <div class="aspect-video bg-slate-900 flex items-center justify-center overflow-hidden">
+          <div
+            class="aspect-video bg-slate-900 flex items-center justify-center overflow-hidden cursor-pointer"
+            @click="openProject(project._id)"
+          >
             <img
               v-if="project.thumbnail"
               :src="project.thumbnail"
@@ -50,10 +52,43 @@
           </div>
 
           <div class="p-4">
-            <h3 class="text-lg font-semibold text-white mb-1 group-hover:text-cyan-400 transition-colors">
+            <h3
+              class="text-lg font-semibold text-white mb-1 group-hover:text-cyan-400 transition-colors cursor-pointer"
+              @click="openProject(project._id)"
+            >
               {{ project.title }}
             </h3>
             <p class="text-sm text-slate-400 mb-3 line-clamp-2">{{ project.description || 'No description' }}</p>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2 mb-3">
+              <button
+                @click.stop="openShareModal(project)"
+                class="flex-1 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-sm rounded-lg transition-all flex items-center justify-center gap-1"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                Share
+              </button>
+              <button
+                @click.stop="openCollaboratorsModal(project)"
+                class="flex-1 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-sm rounded-lg transition-all flex items-center justify-center gap-1"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {{ project.collaborators?.length || 0 }}
+              </button>
+              <button
+                @click.stop="handleDeleteProject(project._id)"
+                class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-all"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
 
             <div class="flex items-center justify-between text-sm">
               <span class="text-slate-500">
@@ -108,7 +143,6 @@
               >
                 <option value="private">Private</option>
                 <option value="public">Public</option>
-                <!-- <option value="unlisted">Unlisted</option> -->
               </select>
             </div>
 
@@ -131,6 +165,108 @@
           </form>
         </div>
       </div>
+
+      <!-- Share Modal -->
+      <div v-if="showShareModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="showShareModal = false">
+        <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4" @click.stop>
+          <h2 class="text-xl font-semibold text-white mb-4">Share Project</h2>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2">Permission</label>
+              <select v-model="shareRole" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white">
+                <option value="viewer">Viewer (Can view only)</option>
+                <option value="editor">Editor (Can edit)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-2">Expires In</label>
+              <select v-model="shareExpiry" class="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white">
+                <option :value="24">24 hours</option>
+                <option :value="72">3 days</option>
+                <option :value="168">7 days</option>
+                <option :value="720">30 days</option>
+              </select>
+            </div>
+
+            <div v-if="shareLink" class="p-3 bg-slate-900 rounded-lg">
+              <label class="block text-xs font-medium text-slate-400 mb-1">Share Link:</label>
+              <div class="flex gap-2">
+                <input
+                  :value="shareLink"
+                  readonly
+                  class="flex-1 px-2 py-1 bg-slate-800 text-white text-sm rounded border border-slate-600"
+                />
+                <button
+                  @click="copyShareLink"
+                  class="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm rounded transition-colors"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 mt-6">
+            <button @click="showShareModal = false" class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg">
+              Cancel
+            </button>
+            <button @click="generateShare" :disabled="generatingLink" class="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white rounded-lg">
+              {{ generatingLink ? 'Generating...' : 'Generate Link' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collaborators Modal -->
+      <div v-if="showCollaboratorsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="showCollaboratorsModal = false">
+        <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto" @click.stop>
+          <h2 class="text-xl font-semibold text-white mb-4">Manage Collaborators</h2>
+
+          <div class="space-y-3">
+            <div
+              v-for="collab in selectedProject?.collaborators"
+              :key="collab.user._id"
+              class="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg"
+            >
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-cyan-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                  {{ collab.user.username[0].toUpperCase() }}
+                </div>
+                <div>
+                  <p class="text-white font-medium">{{ collab.user.username }}</p>
+                  <p class="text-sm text-slate-400">{{ collab.role }}</p>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <select
+                  :value="collab.role"
+                  @change="updateRole(collab.user._id, ($event.target as HTMLSelectElement).value)"
+                  class="px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-sm"
+                >
+                  <option value="viewer">Viewer</option>
+                  <option value="editor">Editor</option>
+                </select>
+                <button
+                  @click="removeCollab(collab.user._id)"
+                  class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+
+            <div v-if="!selectedProject?.collaborators || selectedProject.collaborators.length === 0" class="text-center py-8 text-slate-400">
+              No collaborators yet. Share a link to invite people!
+            </div>
+          </div>
+
+          <button @click="showCollaboratorsModal = false" class="w-full mt-6 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg">
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -144,6 +280,13 @@ const router = useRouter();
 const projectStore = useProjectStore();
 
 const showCreateDialog = ref(false);
+const showShareModal = ref(false);
+const showCollaboratorsModal = ref(false);
+const selectedProject = ref<any>(null);
+const shareLink = ref('');
+const shareRole = ref('viewer');
+const shareExpiry = ref(168);
+const generatingLink = ref(false);
 
 const newProject = ref({
   title: '',
@@ -170,6 +313,65 @@ const createProject = async () => {
 
 const closeCreateDialog = () => {
   showCreateDialog.value = false;
+};
+
+const openShareModal = (project: any) => {
+  selectedProject.value = project;
+  showShareModal.value = true;
+};
+
+const openCollaboratorsModal = (project: any) => {
+  selectedProject.value = project;
+  showCollaboratorsModal.value = true;
+};
+
+const handleDeleteProject = async (id: string) => {
+  if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+    await projectStore.deleteProject(id);
+    projectStore.fetchMyProjects();
+  }
+};
+
+const generateShare = async () => {
+  if (!selectedProject.value) return;
+
+  generatingLink.value = true;
+  try {
+    const share = await projectStore.generateShareLink(selectedProject.value._id, shareRole.value, shareExpiry.value);
+    shareLink.value = share.link;
+  } catch (error) {
+    console.error('Error generating share link:', error);
+  } finally {
+    generatingLink.value = false;
+  }
+};
+
+const copyShareLink = () => {
+  if (shareLink.value) {
+    navigator.clipboard.writeText(shareLink.value).then(() => {
+      // Show success toast or feedback
+    });
+  }
+};
+
+const updateRole = async (userId: string, role: string) => {
+  if (!selectedProject.value) return;
+
+  try {
+    await projectStore.updateCollaboratorRole(selectedProject.value._id, userId, role);
+  } catch (error) {
+    console.error('Error updating collaborator role:', error);
+  }
+};
+
+const removeCollab = async (userId: string) => {
+  if (!selectedProject.value) return;
+
+  try {
+    await projectStore.removeCollaborator(selectedProject.value._id, userId);
+  } catch (error) {
+    console.error('Error removing collaborator:', error);
+  }
 };
 
 const formatDate = (date: string) => {

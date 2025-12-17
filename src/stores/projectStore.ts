@@ -152,6 +152,75 @@ export const useProjectStore = defineStore('project', () => {
     }
   };
 
+  const removeCollaborator = async (id: string, userId: string) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await axios.delete(`${API_URL}/projects/${id}/collaborators`, {
+        data: { userId }
+      });
+      currentProject.value = response.data;
+      return response.data;
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'Failed to remove collaborator';
+      return null;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const updateCollaboratorRole = async (id: string, userId: string, role: string) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await axios.put(`${API_URL}/projects/${id}/collaborators/role`, {
+        userId,
+        role
+      });
+      currentProject.value = response.data;
+      return response.data;
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'Failed to update role';
+      return null;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const generateShareLink = async (id: string, role: string, expiresIn?: number) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await axios.post(`${API_URL}/projects/${id}/share-link`, {
+        role,
+        expiresIn
+      });
+      return {
+        link: response.data.shareUrl,
+        ...response.data
+      };
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'Failed to generate share link';
+      return null;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const joinViaShareLink = async (id: string, token: string) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await axios.post(`${API_URL}/projects/${id}/join/${token}`);
+      return response.data;
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'Failed to join project';
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     projects,
     currentProject,
@@ -167,6 +236,10 @@ export const useProjectStore = defineStore('project', () => {
     createVersion,
     forkProject,
     voteProject,
-    addCollaborator
+    addCollaborator,
+    removeCollaborator,
+    updateCollaboratorRole,
+    generateShareLink,
+    joinViaShareLink
   };
 });

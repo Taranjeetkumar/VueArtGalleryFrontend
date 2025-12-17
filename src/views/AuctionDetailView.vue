@@ -311,8 +311,13 @@ const handlePlaceBid = async () => {
 
   try {
     await auctionStore.placeBid(auction.value._id, bidAmount.value);
-    bidAmount.value = 0;
-    // Show success message could be added here
+
+    // Show success feedback
+    bidError.value = null;
+    bidAmount.value = minBidAmount.value; // Reset to new minimum
+
+    // Show success message
+    alert(`Bid placed successfully! You are now the highest bidder at €${auction.value.currentPrice.toLocaleString()}`);
   } catch (err: any) {
     bidError.value = err.response?.data?.message || 'Failed to place bid';
   } finally {

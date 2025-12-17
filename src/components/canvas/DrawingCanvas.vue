@@ -63,6 +63,8 @@ let lastX = ref(0);
 let lastY = ref(0);
 let startX = ref(0);
 let startY = ref(0);
+let currentMouseX = ref(0);
+let currentMouseY = ref(0);
 let tempCanvas: HTMLCanvasElement | null = null;
 let tempCtx: CanvasRenderingContext2D | null = null;
 
@@ -118,6 +120,10 @@ const draw = (e: MouseEvent) => {
   const rect = canvasRef.value.getBoundingClientRect();
   const currentX = (e.clientX - rect.left) / canvasStore.zoom;
   const currentY = (e.clientY - rect.top) / canvasStore.zoom;
+
+  // Store current mouse position
+  currentMouseX.value = currentX;
+  currentMouseY.value = currentY;
 
   emit('cursor-move', currentX, currentY);
 
@@ -214,17 +220,18 @@ const stopDrawing = () => {
   const tool = canvasStore.drawingState.tool;
 
   // For shape tools, finalize the shape
-  if (['rectangle', 'circle', 'line'].includes(tool) && ctx) {
-    // The shape is already drawn, just restore temp canvas
+  if (['rectangle', 'circle', 'line'].includes(tool) && ctx && canvasRef.value) {
+    // Use the last tracked mouse position
+    const finalX = currentMouseX.value;
+    const finalY = currentMouseY.value;
+
+    // Restore the canvas to state before preview
     if (tempCanvas) {
       ctx.clearRect(0, 0, canvasStore.canvasSize.width, canvasStore.canvasSize.height);
       ctx.drawImage(tempCanvas, 0, 0);
     }
 
-    // Redraw the final shape
-    const currentX = lastX.value;
-    const currentY = lastY.value;
-
+    // Draw the final shape
     ctx.strokeStyle = canvasStore.drawingState.color;
     ctx.fillStyle = canvasStore.drawingState.color;
     ctx.lineWidth = canvasStore.drawingState.strokeWidth;
@@ -234,23 +241,57 @@ const stopDrawing = () => {
     ctx.globalCompositeOperation = 'source-over';
 
     if (tool === 'rectangle') {
-      const width = currentX - startX.value;
-      const height = currentY - startY.value;
+      const width = finalX - startX.value;
+      const height = finalY - startY.value;
       ctx.strokeRect(startX.value, startY.value, width, height);
+
+      // Emit shape data for collaboration
+      emit('draw', {
+        tool,
+        color: canvasStore.drawingState.color,
+        strokeWidth: canvasStore.drawingState.strokeWidth,
+        opacity: canvasStore.drawingState.opacity,
+        shape: 'rectangle',
+        start: { x: startX.value, y: startY.value },
+        width,
+        height
+      });
     } else if (tool === 'circle') {
       const radius = Math.sqrt(
-        Math.pow(currentX - startX.value, 2) + Math.pow(currentY - startY.value, 2)
+        Math.pow(finalX - startX.value, 2) + Math.pow(finalY - startY.value, 2)
       );
       ctx.beginPath();
       ctx.arc(startX.value, startY.value, radius, 0, 2 * Math.PI);
       ctx.stroke();
       ctx.closePath();
+
+      // Emit shape data for collaboration
+      emit('draw', {
+        tool,
+        color: canvasStore.drawingState.color,
+        strokeWidth: canvasStore.drawingState.strokeWidth,
+        opacity: canvasStore.drawingState.opacity,
+        shape: 'circle',
+        center: { x: startX.value, y: startY.value },
+        radius
+      });
     } else if (tool === 'line') {
       ctx.beginPath();
       ctx.moveTo(startX.value, startY.value);
-      ctx.lineTo(currentX, currentY);
+      ctx.lineTo(finalX, finalY);
       ctx.stroke();
       ctx.closePath();
+
+      // Emit shape data for collaboration
+      emit('draw', {
+        tool,
+        color: canvasStore.drawingState.color,
+        strokeWidth: canvasStore.drawingState.strokeWidth,
+        opacity: canvasStore.drawingState.opacity,
+        shape: 'line',
+        from: { x: startX.value, y: startY.value },
+        to: { x: finalX, y: finalY }
+      });
     }
 
     emit('save-state');
@@ -355,11 +396,28 @@ const applyRemoteDrawing = (drawData: any) => {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  ctx.beginPath();
-  ctx.moveTo(drawData.from.x, drawData.from.y);
-  ctx.lineTo(drawData.to.x, drawData.to.y);
-  ctx.stroke();
-  ctx.closePath();
+  // Handle shape drawing
+  if (drawData.shape === 'rectangle') {
+    ctx.strokeRect(drawData.start.x, drawData.start.y, drawData.width, drawData.height);
+  } else if (drawData.shape === 'circle') {
+    ctx.beginPath();
+    ctx.arc(drawData.center.x, drawData.center.y, drawData.radius, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.closePath();
+  } else if (drawData.shape === 'line') {
+    ctx.beginPath();
+    ctx.moveTo(drawData.from.x, drawData.from.y);
+    ctx.lineTo(drawData.to.x, drawData.to.y);
+    ctx.stroke();
+    ctx.closePath();
+  } else {
+    // Handle freehand drawing (brush, pencil, eraser)
+    ctx.beginPath();
+    ctx.moveTo(drawData.from.x, drawData.from.y);
+    ctx.lineTo(drawData.to.x, drawData.to.y);
+    ctx.stroke();
+    ctx.closePath();
+  }
 };
 
 const getCanvasData = () => {
