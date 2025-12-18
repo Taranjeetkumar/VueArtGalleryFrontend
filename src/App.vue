@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from './stores/authStore';
 import NavBar from './components/common/NavBar.vue';
+import Toast from './components/common/Toast.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -22,6 +23,7 @@ onMounted(() => {
     <main :class="{ 'h-screen': isEditorRoute }">
       <RouterView />
     </main>
+    <Toast />
   </div>
 </template>
 

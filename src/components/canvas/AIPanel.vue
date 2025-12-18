@@ -185,8 +185,10 @@
 import { ref } from "vue";
 import axios from "axios";
 import { useCanvasStore } from "../../stores/canvasStore";
+import { useToast } from "../../composables/useToast";
 
 const canvasStore = useCanvasStore();
+const toast = useToast();
 
 const emit = defineEmits<{
   "generated-image": [imageUrl: string];
@@ -234,11 +236,12 @@ const handleGenerateImage = async () => {
     );
 
     generatedImage.value = response.data.imageUrl;
+    toast.success('Image generated successfully!');
   } catch (error: any) {
     console.error("Generate image error:", error);
-    alert(
+    toast.error(
       error.response?.data?.message ||
-        "Failed to generate image. Please check if OpenAI API key is configured.",
+        "Failed to generate image. Please check if OpenAI API key is configured."
     );
   } finally {
     loading.value = false;
@@ -261,9 +264,10 @@ const handleGetSuggestions = async () => {
     );
 
     suggestions.value = response.data.suggestions;
+    toast.success('Suggestions generated!');
   } catch (error: any) {
     console.error("Get suggestions error:", error);
-    alert(error.response?.data?.message || "Failed to get suggestions");
+    toast.error(error.response?.data?.message || "Failed to get suggestions");
   } finally {
     loading.value = false;
   }
@@ -284,9 +288,10 @@ const handleGetPalette = async () => {
     );
 
     colorPalette.value = response.data.palette;
+    toast.success('Color palette generated!');
   } catch (error: any) {
     console.error("Get palette error:", error);
-    alert(error.response?.data?.message || "Failed to generate palette");
+    toast.error(error.response?.data?.message || "Failed to generate palette");
   } finally {
     loading.value = false;
   }

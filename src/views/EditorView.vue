@@ -1,5 +1,24 @@
 <template>
   <div class="h-screen flex flex-col bg-slate-900">
+    <!-- Sold Item Warning Banner -->
+    <div v-if="project?.soldTo" class="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        <div>
+          <p class="font-bold">This item has been sold and cannot be edited</p>
+          <p class="text-sm opacity-90">Sold to {{ project.soldTo?.username }} for €{{ project.soldPrice?.toLocaleString() }}</p>
+        </div>
+      </div>
+      <RouterLink
+        :to="`/project/${project._id}`"
+        class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium transition-colors"
+      >
+        View Details & Fork
+      </RouterLink>
+    </div>
+
     <!-- Top Bar -->
     <div class="bg-slate-800 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-4">
@@ -10,7 +29,10 @@
         </RouterLink>
 
         <div v-if="project">
-          <h1 class="text-white font-semibold">{{ project.title }}</h1>
+          <h1 class="text-white font-semibold">
+            {{ project.title }}
+            <span v-if="project.soldTo" class="ml-2 text-xs px-2 py-1 bg-green-500 rounded-full">SOLD</span>
+          </h1>
           <p class="text-xs text-slate-400">Version {{ project.currentVersion }}</p>
         </div>
       </div>
@@ -32,17 +54,18 @@
           <span class="text-sm text-slate-400">{{ activeUsers.length }} online</span>
         </div>
 
-        <!-- Save Button -->
+        <!-- Save Button (disabled for sold items) -->
         <button
           @click="saveVersion"
-          :disabled="saving"
-          class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white rounded-lg transition-all disabled:opacity-50 flex items-center gap-2"
+          :disabled="saving || project?.soldTo"
+          :title="project?.soldTo ? 'Cannot edit sold items' : ''"
+          class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <svg v-if="!saving" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
           <div v-else class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"/>
-          {{ saving ? 'Saving...' : 'Save Version' }}
+          {{ saving ? 'Saving...' : project?.soldTo ? 'Read Only' : 'Save Version' }}
         </button>
 
         <!-- AR Preview -->
@@ -164,6 +187,7 @@ import { useProjectStore } from '../stores/projectStore';
 import { useCanvasStore } from '../stores/canvasStore';
 import { useAuthStore } from '../stores/authStore';
 import { useSocket } from '../composables/useSocket';
+import { useToast } from '../composables/useToast';
 import DrawingCanvas from '../components/canvas/DrawingCanvas.vue';
 import Toolbar from '../components/canvas/Toolbar.vue';
 import AIPanel from '../components/canvas/AIPanel.vue';
@@ -173,6 +197,7 @@ const route = useRoute();
 const projectStore = useProjectStore();
 const canvasStore = useCanvasStore();
 const authStore = useAuthStore();
+const toast = useToast();
 
 const projectId = computed(() => route.params.id as string);
 const project = ref<any>(null);
@@ -373,6 +398,11 @@ const handleClear = () => {
 const saveVersion = async () => {
   if (!canvasRef.value) return;
 
+  if (project.value?.soldTo) {
+    toast.error('Cannot edit sold items', 'Please fork this project to make changes');
+    return;
+  }
+
   saving.value = true;
   try {
     const canvasData = canvasRef.value.getCanvasData();
@@ -398,10 +428,11 @@ const saveVersion = async () => {
     // Emit canvas state to WebSocket for synchronization
     emitCanvasUpdate(projectId.value, canvasData, canvasStore.layers);
 
-    alert('Version saved successfully!');
-  } catch (error) {
+    toast.success('Version saved successfully!');
+  } catch (error: any) {
     console.error('Failed to save version:', error);
-    alert('Failed to save version');
+    const errorMsg = error.response?.data?.message || 'Failed to save version';
+    toast.error(errorMsg);
   } finally {
     saving.value = false;
   }

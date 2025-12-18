@@ -2,19 +2,60 @@
   <div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-5xl mx-auto" v-if="project">
       <div class="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
-        <div class="aspect-video bg-slate-900 flex items-center justify-center">
-          <img
-            v-if="project.thumbnail"
-            :src="project.thumbnail"
-            :alt="project.title"
-            class="w-full h-full object-contain"
-          >
+        <!-- Sold Badge Overlay -->
+        <div class="relative">
+          <div v-if="project.soldTo" class="absolute top-4 right-4 z-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-2xl">
+            SOLD FOR €{{ project.soldPrice?.toLocaleString() }}
+          </div>
+
+          <div class="aspect-video bg-slate-900 flex items-center justify-center relative">
+            <!-- Sold Overlay -->
+            <div v-if="project.soldTo" class="absolute inset-0 bg-black/30 flex items-center justify-center z-5">
+              <div class="text-center">
+                <svg class="w-24 h-24 text-green-400 mx-auto mb-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <p class="text-white font-bold text-xl">ITEM SOLD</p>
+              </div>
+            </div>
+
+            <img
+              v-if="project.thumbnail"
+              :src="project.thumbnail"
+              :alt="project.title"
+              class="w-full h-full object-contain"
+            >
+          </div>
         </div>
 
         <div class="p-8">
+          <!-- Sold Information Banner -->
+          <div v-if="project.soldTo" class="mb-6 p-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-green-400 font-bold text-lg mb-1">This artwork has been sold</p>
+                <p class="text-white text-sm">
+                  Sold to <span class="font-semibold">{{ project.soldTo?.username }}</span>
+                  for <span class="font-semibold">€{{ project.soldPrice?.toLocaleString() }}</span>
+                  on {{ formatSoldDate(project.soldAt) }}
+                </p>
+              </div>
+              <button
+                v-if="!isOwner"
+                @click="handleFork"
+                class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white rounded-lg transition-all font-bold shadow-lg"
+              >
+                Fork This Project
+              </button>
+            </div>
+          </div>
+
           <div class="flex items-start justify-between mb-6">
             <div>
-              <h1 class="text-3xl font-bold text-white mb-2">{{ project.title }}</h1>
+              <h1 class="text-3xl font-bold text-white mb-2">
+                {{ project.title }}
+                <span v-if="project.soldTo" class="ml-3 text-sm px-3 py-1 bg-green-500 rounded-full">SOLD</span>
+              </h1>
               <p class="text-slate-400">{{ project.description }}</p>
             </div>
             <div class="flex gap-2">
@@ -22,9 +63,10 @@
                 Login to interact
               </div>
               <template v-else>
-                <!-- Owner Actions -->
+                <!-- Owner Actions (disable for sold items) -->
                 <template v-if="isOwner">
                   <button
+                    v-if="!project.soldTo"
                     @click="showShareModal = true"
                     class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all flex items-center gap-2"
                   >
@@ -34,6 +76,7 @@
                     Share
                   </button>
                   <button
+                    v-if="!project.soldTo"
                     @click="showCollaboratorsModal = true"
                     class="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-lg transition-all flex items-center gap-2"
                   >
@@ -43,6 +86,7 @@
                     Collaborators ({{ project.collaborators?.length || 0 }})
                   </button>
                   <button
+                    v-if="!project.soldTo"
                     @click="handleDelete"
                     class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all flex items-center gap-2"
                   >
@@ -55,14 +99,14 @@
 
                 <!-- Non-owner Actions -->
                 <button
-                  v-if="!isOwner"
+                  v-if="!isOwner && !project.soldTo"
                   @click="handleVote(1)"
                   class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
                 >
                   👍 {{ project.voteCount || 0 }}
                 </button>
                 <button
-                  v-if="!isOwner"
+                  v-if="!isOwner || project.soldTo"
                   @click="handleFork"
                   class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 text-white rounded-lg transition-all"
                 >
@@ -229,11 +273,13 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useProjectStore } from '../stores/projectStore';
 import { useAuthStore } from '../stores/authStore';
+import { useToast } from '../composables/useToast';
 
 const route = useRoute();
 const router = useRouter();
 const projectStore = useProjectStore();
 const authStore = useAuthStore();
+const toast = useToast();
 
 const project = ref<any>(null);
 const showShareModal = ref(false);
@@ -267,13 +313,17 @@ const handleFork = async () => {
 };
 
 const handleDelete = async () => {
-  if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+  const confirmed = await toast.confirm('Are you sure you want to delete this project? This action cannot be undone.');
+  if (!confirmed) {
     return;
   }
 
   const success = await projectStore.deleteProject(route.params.id as string);
   if (success) {
+    toast.success('Project deleted successfully');
     router.push('/dashboard');
+  } else {
+    toast.error('Failed to delete project');
   }
 };
 
@@ -292,7 +342,7 @@ const generateShare = async () => {
 
 const copyShareLink = () => {
   navigator.clipboard.writeText(shareLink.value);
-  alert('Link copied to clipboard!');
+  toast.success('Link copied to clipboard!');
 };
 
 const updateRole = async (userId: string, role: string) => {
@@ -302,11 +352,13 @@ const updateRole = async (userId: string, role: string) => {
 };
 
 const removeCollab = async (userId: string) => {
-  if (!confirm('Are you sure you want to remove this collaborator?')) {
+  const confirmed = await toast.confirm('Are you sure you want to remove this collaborator?');
+  if (!confirmed) {
     return;
   }
   await projectStore.removeCollaborator(route.params.id as string, userId);
   const data = await projectStore.fetchProject(route.params.id as string);
   project.value = data;
+  toast.success('Collaborator removed');
 };
 </script>

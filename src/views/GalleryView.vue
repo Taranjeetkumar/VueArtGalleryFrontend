@@ -157,9 +157,11 @@
 import { ref, onMounted, watch } from 'vue';
 import { useProjectStore } from '../stores/projectStore';
 import { useAuthStore } from '../stores/authStore';
+import { useToast } from '../composables/useToast';
 
 const projectStore = useProjectStore();
 const authStore = useAuthStore();
+const toast = useToast();
 const searchQuery = ref('');
 const sortBy = ref('-voteCount');
 const filterType = ref('all');
@@ -214,7 +216,7 @@ const handleSearch = () => {
 
 const handleVote = async (projectId: string, value: number) => {
   if (!authStore.isAuthenticated) {
-    alert('Please login to vote');
+    toast.warning('Please login to vote');
     return;
   }
 

@@ -32,12 +32,35 @@
         <div
           v-for="project in projectStore.myProjects"
           :key="project._id"
-          class="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-cyan-500/50 transition-all group"
+          class="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-cyan-500/50 transition-all group relative"
         >
+          <!-- Sold Badge -->
+          <div v-if="project.soldTo" class="absolute top-3 right-3 z-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+            SOLD - €{{ project.soldPrice?.toLocaleString() }}
+          </div>
+
+          <!-- Auction Badge -->
+          <div v-else-if="project.auction?.isActive" class="absolute top-3 right-3 z-10 bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
+            </svg>
+            ON AUCTION
+          </div>
+
           <div
-            class="aspect-video bg-slate-900 flex items-center justify-center overflow-hidden cursor-pointer"
+            class="aspect-video bg-slate-900 flex items-center justify-center overflow-hidden cursor-pointer relative"
             @click="openProject(project._id)"
           >
+            <!-- Sold Overlay -->
+            <div v-if="project.soldTo" class="absolute inset-0 bg-black/40 flex items-center justify-center z-5">
+              <div class="text-center">
+                <svg class="w-16 h-16 text-green-400 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <p class="text-white font-bold text-sm">SOLD</p>
+              </div>
+            </div>
+
             <img
               v-if="project.thumbnail"
               :src="project.thumbnail"
@@ -60,9 +83,33 @@
             </h3>
             <p class="text-sm text-slate-400 mb-3 line-clamp-2">{{ project.description || 'No description' }}</p>
 
-            <!-- Action Buttons -->
+            <!-- Sold Info -->
+            <div v-if="project.soldTo" class="mb-3 p-2 bg-green-500/10 rounded-lg border border-green-500/20">
+              <div class="flex items-center gap-2 text-sm">
+                <span class="text-green-400 font-medium">Sold to:</span>
+                <span class="text-white">{{ project.soldTo?.username || 'Unknown' }}</span>
+              </div>
+              <div class="text-xs text-slate-400 mt-1">
+                {{ formatDate(project.soldAt) }}
+              </div>
+            </div>
+
+            <!-- Auction Info -->
+            <div v-else-if="project.auction?.isActive" class="mb-3 p-2 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-lg border border-yellow-500/20">
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-yellow-400 font-medium">Current Bid:</span>
+                <span class="text-white font-bold">€{{ project.auction.currentPrice || project.auction.startPrice }}</span>
+              </div>
+              <div class="flex justify-between items-center text-xs text-slate-400 mt-1">
+                <span>{{ project.auction.bids?.length || 0 }} bids</span>
+                <span v-if="project.auction.endDate">{{ getAuctionTimeRemaining(project.auction.endDate) }}</span>
+              </div>
+            </div>
+
+            <!-- Action Buttons (disable for sold items) -->
             <div class="flex items-center gap-2 mb-3">
               <button
+                v-if="!project.soldTo"
                 @click.stop="openShareModal(project)"
                 class="flex-1 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-sm rounded-lg transition-all flex items-center justify-center gap-1"
               >
@@ -72,6 +119,7 @@
                 Share
               </button>
               <button
+                v-if="!project.soldTo"
                 @click.stop="openCollaboratorsModal(project)"
                 class="flex-1 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white text-sm rounded-lg transition-all flex items-center justify-center gap-1"
               >
@@ -80,7 +128,11 @@
                 </svg>
                 {{ project.collaborators?.length || 0 }}
               </button>
+              <div v-if="project.soldTo" class="flex-1 text-center text-sm text-slate-400 italic">
+                This item has been sold
+              </div>
               <button
+                v-if="!project.soldTo"
                 @click.stop="handleDeleteProject(project._id)"
                 class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-all"
               >
@@ -275,9 +327,11 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProjectStore } from '../stores/projectStore';
+import { useToast } from '../composables/useToast';
 
 const router = useRouter();
 const projectStore = useProjectStore();
+const toast = useToast();
 
 const showCreateDialog = ref(false);
 const showShareModal = ref(false);
@@ -326,9 +380,15 @@ const openCollaboratorsModal = (project: any) => {
 };
 
 const handleDeleteProject = async (id: string) => {
-  if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-    await projectStore.deleteProject(id);
-    projectStore.fetchMyProjects();
+  const confirmed = await toast.confirm('Are you sure you want to delete this project? This action cannot be undone.');
+  if (confirmed) {
+    const success = await projectStore.deleteProject(id);
+    if (success) {
+      toast.success('Project deleted successfully');
+      projectStore.fetchMyProjects();
+    } else {
+      toast.error('Failed to delete project');
+    }
   }
 };
 
@@ -384,5 +444,16 @@ const formatDate = (date: string) => {
   if (days === 1) return 'Yesterday';
   if (days < 7) return `${days} days ago`;
   return d.toLocaleDateString();
+};
+
+const getAuctionTimeRemaining = (endDate: string) => {
+  const end = new Date(endDate);
+  const now = new Date();
+  const diff = end.getTime() - now.getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 };
 </script>

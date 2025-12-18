@@ -218,10 +218,12 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useProjectStore } from '../stores/projectStore';
+import { useToast } from '../composables/useToast';
 import html2canvas from 'html2canvas';
 
 const route = useRoute();
 const projectStore = useProjectStore();
+const toast = useToast();
 
 const projectId = ref(route.params.id as string);
 const project = ref<any>(null);
@@ -293,10 +295,11 @@ const shareAR = async () => {
     } else {
       // Fallback: copy link
       await navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
+      toast.success('Link copied to clipboard!');
     }
   } catch (error) {
     console.error('Failed to share:', error);
+    toast.error('Failed to share');
   }
 };
 </script>

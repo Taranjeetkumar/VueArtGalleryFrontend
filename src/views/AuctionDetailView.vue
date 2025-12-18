@@ -264,11 +264,13 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuctionStore } from '../stores/auctionStore';
 import { useAuthStore } from '../stores/authStore';
+import { useToast } from '../composables/useToast';
 
 const route = useRoute();
 const router = useRouter();
 const auctionStore = useAuctionStore();
 const authStore = useAuthStore();
+const toast = useToast();
 
 const auction = computed(() => auctionStore.currentAuction);
 const loading = ref(false);
@@ -353,9 +355,10 @@ const handlePlaceBid = async () => {
     bidAmount.value = minBidAmount.value; // Reset to new minimum
 
     // Show success message
-    alert(`Bid placed successfully! You are now the highest bidder at €${auction.value.currentPrice.toLocaleString()}`);
+    toast.success('Bid placed successfully!', `You are now the highest bidder at €${auction.value.currentPrice.toLocaleString()}`);
   } catch (err: any) {
     bidError.value = err.response?.data?.message || 'Failed to place bid';
+    toast.error(bidError.value);
   } finally {
     bidLoading.value = false;
   }
@@ -364,16 +367,19 @@ const handlePlaceBid = async () => {
 const handleBuyNow = async () => {
   if (!auction.value || !auction.value.buyNowPrice) return;
 
-  if (!confirm(`Are you sure you want to buy this item for €${auction.value.buyNowPrice.toLocaleString()}?`)) {
+  const confirmed = await toast.confirm(`Are you sure you want to buy this item for €${auction.value.buyNowPrice.toLocaleString()}?`);
+  if (!confirmed) {
     return;
   }
 
   buyNowLoading.value = true;
   try {
     await auctionStore.placeBid(auction.value._id, auction.value.buyNowPrice);
+    toast.success('Purchase completed successfully!');
     // Auction should now be marked as sold
   } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to complete purchase');
+    const errorMsg = err.response?.data?.message || 'Failed to complete purchase';
+    toast.error(errorMsg);
   } finally {
     buyNowLoading.value = false;
   }
