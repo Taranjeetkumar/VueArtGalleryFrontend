@@ -137,20 +137,44 @@
               </div>
 
               <!-- Time Remaining -->
-              <div v-if="auction.status === 'active'" class="mb-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+              <div v-if="auction.status === 'active' && !isAuctionEnded" class="mb-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
                 <p class="text-sm text-slate-400 mb-1">Time Remaining</p>
                 <p class="text-2xl font-bold text-white">{{ timeRemaining }}</p>
               </div>
 
+              <!-- Auction Ended Message -->
+              <div v-if="isAuctionEnded && auction.status === 'active'" class="mb-6 p-4 bg-orange-500/10 rounded-lg border border-orange-500/50">
+                <p class="text-sm text-orange-400 mb-1">Auction Ended</p>
+                <p class="text-lg font-bold text-white">Bidding has closed</p>
+              </div>
+
+              <!-- Auction Results -->
+              <div v-if="(auction.status === 'ended' || auction.status === 'sold' || isAuctionEnded) && auction.bids.length > 0" class="mb-6 p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-500/50">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  <p class="text-sm text-green-400 font-semibold">SOLD!</p>
+                </div>
+                <p class="text-white font-bold text-lg">Winner: {{ sortedBids[0].bidder.username }}</p>
+                <p class="text-slate-300 text-sm">Final Price: €{{ auction.currentPrice.toLocaleString() }}</p>
+              </div>
+
+              <div v-else-if="(auction.status === 'ended' || isAuctionEnded) && auction.bids.length === 0" class="mb-6 p-4 bg-slate-500/10 rounded-lg border border-slate-500/50">
+                <p class="text-sm text-slate-400 mb-1">Auction Ended</p>
+                <p class="text-lg font-bold text-white">No bids received</p>
+                <p class="text-slate-400 text-sm">This item was not sold</p>
+              </div>
+
               <!-- Winner Info -->
-              <div v-if="auction.winner" class="mb-6 p-4 bg-cyan-500/10 rounded-lg border border-cyan-500/50">
+              <div v-if="auction.winner && auction.status === 'sold'" class="mb-6 p-4 bg-cyan-500/10 rounded-lg border border-cyan-500/50">
                 <p class="text-sm text-cyan-400 mb-1">Winner</p>
                 <p class="text-lg font-bold text-white">{{ auction.winner.username }}</p>
               </div>
 
               <!-- Buy Now Button -->
               <button
-                v-if="auction.buyNowPrice && auction.status === 'active' && canBid"
+                v-if="auction.buyNowPrice && auction.status === 'active' && canBid && !isAuctionEnded"
                 @click="handleBuyNow"
                 :disabled="buyNowLoading"
                 class="w-full mb-4 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all"
@@ -160,7 +184,7 @@
               </button>
 
               <!-- Bidding Form (for authenticated users who don't own the auction) -->
-              <div v-if="auction.status === 'active' && authStore.isAuthenticated && canBid">
+              <div v-if="auction.status === 'active' && !isAuctionEnded && authStore.isAuthenticated && canBid">
                 <div class="mb-4">
                   <label class="block text-sm text-slate-400 mb-2">Your Bid</label>
                   <div class="relative">
@@ -188,7 +212,7 @@
               </div>
 
               <!-- Login Prompt -->
-              <div v-else-if="auction.status === 'active' && !authStore.isAuthenticated" class="text-center p-6 bg-slate-900/50 rounded-lg border border-slate-700">
+              <div v-else-if="auction.status === 'active' && !isAuctionEnded && !authStore.isAuthenticated" class="text-center p-6 bg-slate-900/50 rounded-lg border border-slate-700">
                 <p class="text-slate-400 mb-4">Please login to place a bid</p>
                 <RouterLink
                   to="/login"
@@ -199,8 +223,13 @@
               </div>
 
               <!-- Owner Message -->
-              <div v-else-if="auction.status === 'active' && !canBid && authStore.isAuthenticated" class="text-center p-6 bg-slate-900/50 rounded-lg border border-slate-700">
+              <div v-else-if="auction.status === 'active' && !isAuctionEnded && !canBid && authStore.isAuthenticated" class="text-center p-6 bg-slate-900/50 rounded-lg border border-slate-700">
                 <p class="text-slate-400">This is your auction</p>
+              </div>
+
+              <!-- Auction Ended - Cannot Bid -->
+              <div v-else-if="isAuctionEnded || auction.status === 'ended' || auction.status === 'sold'" class="text-center p-6 bg-slate-900/50 rounded-lg border border-slate-700">
+                <p class="text-slate-400">Bidding has ended</p>
               </div>
 
               <!-- Auction Info -->
@@ -269,6 +298,13 @@ const isValidBid = computed(() => {
 const canBid = computed(() => {
   if (!auction.value || !authStore.user) return false;
   return auction.value.seller._id !== authStore.user._id;
+});
+
+const isAuctionEnded = computed(() => {
+  if (!auction.value) return false;
+  const now = new Date().getTime();
+  const end = new Date(auction.value.endDate).getTime();
+  return now >= end || auction.value.status === 'ended' || auction.value.status === 'sold';
 });
 
 const updateCountdown = () => {

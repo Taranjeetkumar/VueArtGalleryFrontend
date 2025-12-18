@@ -61,6 +61,12 @@ const router = createRouter({
       path: '/auctions/:id',
       name: 'AuctionDetail',
       component: () => import('../views/AuctionDetailView.vue')
+    },
+    {
+      path: '/project/:id/join/:token',
+      name: 'ShareJoin',
+      component: () => import('../views/ShareJoinView.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 });

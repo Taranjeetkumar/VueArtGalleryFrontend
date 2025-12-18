@@ -92,7 +92,7 @@ watch(() => canvasStore.backgroundColor, (newColor) => {
 });
 
 const startDrawing = (e: MouseEvent) => {
-  if (!canvasRef.value) return;
+  if (!canvasRef.value || !ctx) return;
 
   isDrawing.value = true;
   const rect = canvasRef.value.getBoundingClientRect();
@@ -105,6 +105,12 @@ const startDrawing = (e: MouseEvent) => {
   startY.value = y;
 
   const tool = canvasStore.drawingState.tool;
+
+  // For shape tools, save the current canvas state before starting
+  if (['rectangle', 'circle', 'line'].includes(tool) && tempCanvas && tempCtx) {
+    tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+    tempCtx.drawImage(canvasRef.value, 0, 0);
+  }
 
   // For fill tool, execute immediately
   if (tool === 'fill') {
@@ -175,10 +181,6 @@ const draw = (e: MouseEvent) => {
 const drawShapePreview = (currentX: number, currentY: number) => {
   if (!canvasRef.value || !ctx || !tempCanvas || !tempCtx) return;
 
-  // Save current canvas state to temp canvas
-  tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-  tempCtx.drawImage(canvasRef.value, 0, 0);
-
   // Draw shape preview on main canvas
   const tool = canvasStore.drawingState.tool;
   ctx.strokeStyle = canvasStore.drawingState.color;
@@ -189,7 +191,7 @@ const drawShapePreview = (currentX: number, currentY: number) => {
   ctx.globalAlpha = canvasStore.drawingState.opacity;
   ctx.globalCompositeOperation = 'source-over';
 
-  // Restore canvas and draw preview
+  // Restore canvas from temp and draw preview
   ctx.clearRect(0, 0, canvasStore.canvasSize.width, canvasStore.canvasSize.height);
   ctx.drawImage(tempCanvas, 0, 0);
 
